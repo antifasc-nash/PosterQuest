@@ -1,0 +1,249 @@
+import React, { useState, useEffect } from "react";
+import { base44 } from "@/api/base44Client";
+import { useQuery } from "@tanstack/react-query";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { Trophy, MapPin, Camera, Zap, Beer, Shirt, Utensils, Loader2 } from "lucide-react";
+import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
+
+const createUserMarkerIcon = () => {
+  const iconHtml = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="#8B5CF6" stroke="white" stroke-width="2"><circle cx="12" cy="10" r="3"/><path d="M12 21s-8-4.5-8-11a8 8 0 1 1 16 0c0 6.5-8 11-8 11z"/></svg>`;
+  
+  return L.divIcon({
+    html: iconHtml,
+    className: 'custom-marker',
+    iconSize: [24, 24],
+    iconAnchor: [12, 24],
+    popupAnchor: [0, -24],
+  });
+};
+
+export default function ProfilePage() {
+  const [currentUser, setCurrentUser] = useState(null);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [userLoading, setUserLoading] = useState(true);
+
+  const { data: posterLogs = [], isLoading: logsLoading } = useQuery({
+    queryKey: ['myPosterLogs', currentUser?.email],
+    queryFn: async () => {
+      if (!currentUser) return [];
+      try {
+        return await base44.entities.PosterLog.filter({ user_email: currentUser.email }, '-created_date');
+      } catch (error) {
+        console.error("Error fetching poster logs:", error);
+        return [];
+      }
+    },
+    enabled: !!currentUser,
+    initialData: [],
+  });
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const isAuth = await base44.auth.isAuthenticated();
+        if (isAuth) {
+          const user = await base44.auth.me();
+          setCurrentUser(user);
+        }
+      } catch (error) {
+        console.error("Error fetching user:", error);
+      } finally {
+        setUserLoading(false);
+      }
+    };
+    fetchUser();
+  }, []);
+
+  const handlePhotoUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    setUploadingPhoto(true);
+    try {
+      const { file_url } = await base44.integrations.Core.UploadFile({ file });
+      await base44.auth.updateMe({ profile_picture_url: file_url });
+      const updatedUser = await base44.auth.me();
+      setCurrentUser(updatedUser);
+    } catch (error) {
+      console.error("Error uploading photo:", error);
+    }
+    setUploadingPhoto(false);
+  };
+
+  if (userLoading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="text-center">
+          <Loader2 className="w-12 h-12 animate-spin text-blue-600 mx-auto mb-4" />
+          <p className="text-gray-600">Loading profile...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!currentUser) {
+    return <div className="p-4">Please log in to view your profile.</div>;
+  }
+
+  const totalPoints = currentUser.total_points || 0;
+  const posterCount = currentUser.poster_count || 0;
+
+  const rewards = [
+    { name: "Free Beer", points: 100, icon: Beer, color: "text-yellow-600" },
+    { name: "Campaign T-Shirt", points: 300, icon: Shirt, color: "text-blue-600" },
+    { name: "Dinner", points: 750, icon: Utensils, color: "text-purple-600" },
+  ];
+
+  const getNextReward = () => {
+    return rewards.find(r => totalPoints < r.points);
+  };
+
+  const nextReward = getNextReward();
+  const progress = nextReward ? (totalPoints / nextReward.points) * 100 : 100;
+
+  return (
+    <div className="p-4 max-w-4xl mx-auto space-y-6 pb-24 md:pb-8">
+      {/* Profile Header */}
+      <Card className="bg-gradient-to-r from-blue-600 to-purple-600 text-white border-none">
+        <CardContent className="p-6">
+          <div className="flex items-start gap-4">
+            <div className="relative">
+              <Avatar className="w-20 h-20 border-4 border-white">
+                <AvatarImage src={currentUser.profile_picture_url} />
+                <AvatarFallback className="bg-white text-blue-600 text-2xl font-bold">
+                  {currentUser.full_name?.charAt(0) || 'U'}
+                </AvatarFallback>
+              </Avatar>
+              <label htmlFor="photo-upload" className="absolute bottom-0 right-0 bg-white rounded-full p-1 cursor-pointer hover:bg-gray-100 transition-colors">
+                <Camera className="w-4 h-4 text-blue-600" />
+                <input
+                  type="file"
+                  id="photo-upload"
+                  accept="image/*"
+                  onChange={handlePhotoUpload}
+                  className="hidden"
+                  disabled={uploadingPhoto}
+                />
+              </label>
+            </div>
+            <div className="flex-1">
+              <h1 className="text-2xl font-bold mb-1">{currentUser.full_name}</h1>
+              <p className="text-blue-100 text-sm mb-3">{currentUser.email}</p>
+              <div className="flex gap-4">
+                <div className="bg-white/20 rounded-lg px-3 py-1 backdrop-blur-sm">
+                  <div className="text-2xl font-bold">{totalPoints}</div>
+                  <div className="text-xs text-blue-100">Points</div>
+                </div>
+                <div className="bg-white/20 rounded-lg px-3 py-1 backdrop-blur-sm">
+                  <div className="text-2xl font-bold">{posterCount}</div>
+                  <div className="text-xs text-blue-100">Posters</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Reward Progress */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Trophy className="w-5 h-5 text-yellow-600" />
+            Reward Progress
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {rewards.map((reward) => {
+            const achieved = totalPoints >= reward.points;
+            const isNext = nextReward?.points === reward.points;
+            return (
+              <div key={reward.points} className={`p-3 rounded-lg border-2 ${achieved ? 'bg-green-50 border-green-200' : isNext ? 'bg-blue-50 border-blue-200' : 'bg-gray-50 border-gray-200'}`}>
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <reward.icon className={`w-5 h-5 ${reward.color}`} />
+                    <span className="font-semibold">{reward.name}</span>
+                  </div>
+                  <span className={`text-sm font-bold ${achieved ? 'text-green-600' : 'text-gray-600'}`}>
+                    {achieved ? '✓ Unlocked' : `${reward.points} pts`}
+                  </span>
+                </div>
+                {!achieved && isNext && (
+                  <div className="space-y-1">
+                    <Progress value={progress} className="h-2" />
+                    <p className="text-xs text-gray-600">{reward.points - totalPoints} points to go</p>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </CardContent>
+      </Card>
+
+      {/* Poster Locations Map */}
+      {posterLogs.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <MapPin className="w-5 h-5 text-purple-600" />
+              My Poster Locations
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="h-64 rounded-lg overflow-hidden mb-4">
+              <MapContainer
+                center={[36.1627, -86.7816]}
+                zoom={12}
+                className="w-full h-full"
+              >
+                <TileLayer
+                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                />
+                {posterLogs.map((log) => {
+                  return (
+                    <Marker
+                      key={log.id}
+                      position={[36.1627, -86.7816]}
+                      icon={createUserMarkerIcon()}
+                    >
+                      <Popup>
+                        <div className="text-sm">
+                          <div className="font-semibold">{log.location_address}</div>
+                          <div className="text-xs text-gray-500">+{log.points_earned} points</div>
+                        </div>
+                      </Popup>
+                    </Marker>
+                  );
+                })}
+              </MapContainer>
+            </div>
+            <div className="space-y-2 max-h-48 overflow-y-auto">
+              {posterLogs.map((log, index) => (
+                <div key={log.id} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center text-purple-600 font-bold text-sm">
+                      {posterLogs.length - index}
+                    </div>
+                    <div>
+                      <div className="text-sm font-medium">{log.location_address}</div>
+                      <div className="text-xs text-gray-500">{new Date(log.created_date).toLocaleDateString()}</div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1 text-sm font-semibold text-blue-600">
+                    <Zap className="w-4 h-4" />
+                    +{log.points_earned}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+}
