@@ -1,0 +1,56 @@
+import React, { useState } from "react";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Shield } from "lucide-react";
+import UserManagement from "../components/admin/UserManagement";
+import LocationManagement from "../components/admin/LocationManagement";
+import PhotoReview from "../components/admin/PhotoReview";
+import MeetupManagement from "../components/admin/MeetupManagement";
+import AnnouncementManagement from "../components/admin/AnnouncementManagement";
+
+export default function AdminPage() {
+  const [activeTab, setActiveTab] = useState("users");
+
+  return (
+    <div className="p-4 max-w-7xl mx-auto pb-24 md:pb-8">
+      <div className="flex items-center gap-3 mb-6">
+        <div className="w-12 h-12 bg-gradient-to-r from-red-600 to-orange-600 rounded-lg flex items-center justify-center">
+          <Shield className="w-7 h-7 text-white" />
+        </div>
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
+          <p className="text-gray-600">Manage users, locations, and campaign data</p>
+        </div>
+      </div>
+
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList className="grid w-full grid-cols-5 mb-6">
+          <TabsTrigger value="users">Users</TabsTrigger>
+          <TabsTrigger value="locations">Locations</TabsTrigger>
+          <TabsTrigger value="photos">Photos</TabsTrigger>
+          <TabsTrigger value="meetups">Meetups</TabsTrigger>
+          <TabsTrigger value="announcements">Announce</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="users">
+          <UserManagement />
+        </TabsContent>
+
+        <TabsContent value="locations">
+          <LocationManagement />
+        </TabsContent>
+
+        <TabsContent value="photos">
+          <PhotoReview />
+        </TabsContent>
+
+        <TabsContent value="meetups">
+          <MeetupManagement />
+        </TabsContent>
+
+        <TabsContent value="announcements">
+          <AnnouncementManagement />
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+}
