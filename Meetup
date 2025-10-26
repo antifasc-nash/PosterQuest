@@ -1,0 +1,117 @@
+import React from "react";
+import { base44 } from "@/api/base44Client";
+import { useQuery } from "@tanstack/react-query";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Calendar, MapPin, Clock, Download, Users, Info } from "lucide-react";
+import { format } from "date-fns";
+
+export default function MeetupPage() {
+  const { data: meetups = [] } = useQuery({
+    queryKey: ['meetups'],
+    queryFn: () => base44.entities.Meetup.filter({ is_active: true }, '-created_date', 1),
+    initialData: [],
+  });
+
+  const meetup = meetups[0];
+
+  const generateGoogleCalendarUrl = () => {
+    if (!meetup) return '';
+    const startDate = new Date(meetup.date + 'T' + meetup.time);
+    const endDate = new Date(startDate.getTime() + 2 * 60 * 60 * 1000);
+    
+    const formatDate = (date) => {
+      return date.toISOString().replace(/-|:|\.\d\d\d/g, '');
+    };
+
+    return `https://www.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(meetup.title)}&dates=${formatDate(startDate)}/${formatDate(endDate)}&details=${encodeURIComponent(meetup.description || '')}&location=${encodeURIComponent(meetup.location)}`;
+  };
+
+  const generateICSFile = () => {
+    if (!meetup) return;
+    const startDate = new Date(meetup.date + 'T' + meetup.time);
+    const endDate = new Date(startDate.getTime() + 2 * 60 * 60 * 1000);
+    
+    const formatDate = (date) => {
+      return date.toISOString().replace(/-|:|\.\d\d\d/g, '');
+    };
+
+    const icsContent = `BEGIN:VCALENDAR
+VERSION:2.0
+BEGIN:VEVENT
+DTSTART:${formatDate(startDate)}
+DTEND:${formatDate(endDate)}
+SUMMARY:${meetup.title}
+DESCRIPTION:${meetup.description || ''}
+LOCATION:${meetup.location}
+END:VEVENT
+END:VCALENDAR`;
+
+    const blob = new Blob([icsContent], { type: 'text/calendar' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'meetup.ics';
+    link.click();
+  };
+
+  if (!meetup) {
+    return (
+      <div className="p-4 max-w-4xl mx-auto pb-24 md:pb-8">
+        <Card>
+          <CardContent className="p-8 text-center">
+            <Calendar className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+            <p className="text-gray-500">No upcoming meetups scheduled yet.</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-4 max-w-4xl mx-auto pb-24 md:pb-8 space-y-6">
+      <Card className="bg-gradient-to-br from-purple-600 to-blue-600 text-white border-none shadow-xl">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-3 text-2xl">
+            <Calendar className="w-8 h-8" />
+            {meetup.title}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-start gap-3 bg-white/20 rounded-lg p-4 backdrop-blur-sm">
+            <Clock className="w-6 h-6 mt-0.5" />
+            <div>
+              <div className="font-semibold text-lg">
+                {format(new Date(meetup.date), "EEEE, MMMM d, yyyy")}
+              </div>
+              <div className="text-blue-100">{meetup.time}</div>
+            </div>
+          </div>
+
+          <div className="flex items-start gap-3 bg-white/20 rounded-lg p-4 backdrop-blur-sm">
+            <MapPin className="w-6 h-6 mt-0.5" />
+            <div>
+              <div className="font-semibold text-lg">Location</div>
+              <div className="text-blue-100">{meetup.location}</div>
+            </div>
+          </div>
+
+          {meetup.description && (
+            <div className="flex items-start gap-3 bg-white/20 rounded-lg p-4 backdrop-blur-sm">
+              <Info className="w-6 h-6 mt-0.5" />
+              <div>
+                <div className="font-semibold text-lg mb-1">Details</div>
+                <div className="text-blue-100">{meetup.description}</div>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Download className="w-5 h-5 text-blue-600" />
+            Add to Calendar
+          </CardTitle>
+ 
