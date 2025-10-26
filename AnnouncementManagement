@@ -1,0 +1,116 @@
+import React, { useState } from "react";
+import { base44 } from "@/api/base44Client";
+import { useMutation } from "@tanstack/react-query";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Send, AlertCircle, CheckCircle } from "lucide-react";
+
+export default function AnnouncementManagement() {
+  const [title, setTitle] = useState("");
+  const [message, setMessage] = useState("");
+  const [success, setSuccess] = useState(false);
+
+  const sendAnnouncementMutation = useMutation({
+    mutationFn: async () => {
+      // Get all users
+      const users = await base44.entities.User.list();
+      
+      // Send email to each user
+      for (const user of users) {
+        if (user.email) {
+          await base44.integrations.Core.SendEmail({
+            to: user.email,
+            subject: title,
+            body: message,
+            from_name: "Poster Quest Team"
+          });
+        }
+      }
+
+      // Create announcement record
+      await base44.entities.Announcement.create({
+        title,
+        message,
+        send_email: true,
+        sent: true,
+      });
+    },
+    onSuccess: () => {
+      setSuccess(true);
+      setTitle("");
+      setMessage("");
+      setTimeout(() => setSuccess(false), 5000);
+    },
+  });
+
+  const handleSend = () => {
+    sendAnnouncementMutation.mutate();
+  };
+
+  return (
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle>Send Announcement</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {success && (
+            <Alert className="mb-4 bg-green-50 border-green-200">
+              <CheckCircle className="h-4 w-4 text-green-600" />
+              <AlertDescription className="text-green-800">
+                Announcement sent successfully to all users!
+              </AlertDescription>
+            </Alert>
+          )}
+
+          <Alert className="mb-4">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              This will send an email to all registered users. Make sure your message is clear and informative.
+            </AlertDescription>
+          </Alert>
+
+          <div className="space-y-4">
+            <div>
+              <Label>Subject</Label>
+              <Input
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="Announcement title..."
+              />
+            </div>
+
+            <div>
+              <Label>Message</Label>
+              <Textarea
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                placeholder="Write your announcement message here..."
+                className="h-40"
+              />
+            </div>
+
+            <Button
+              onClick={handleSend}
+              disabled={!title || !message || sendAnnouncementMutation.isPending}
+              className="w-full"
+            >
+              {sendAnnouncementMutation.isPending ? (
+                <>Sending...</>
+              ) : (
+                <>
+                  <Send className="w-4 h-4 mr-2" />
+                  Send Announcement to All Users
+                </>
+              )}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
