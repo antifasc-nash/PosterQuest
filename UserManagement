@@ -1,0 +1,56 @@
+import React, { useState } from "react";
+import { base44 } from "@/api/base44Client";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Search, Plus, Minus, Eye } from "lucide-react";
+
+export default function UserManagement() {
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedUser, setSelectedUser] = useState(null);
+  const [pointsToAdd, setPointsToAdd] = useState(0);
+  const [adjustmentNote, setAdjustmentNote] = useState("");
+
+  const queryClient = useQueryClient();
+
+  const { data: users = [] } = useQuery({
+    queryKey: ['allUsers'],
+    queryFn: () => base44.entities.User.list('-total_points'),
+    initialData: [],
+  });
+
+  const adjustPointsMutation = useMutation({
+    mutationFn: async ({ userId, pointsChange, note }) => {
+      const user = users.find(u => u.id === userId);
+      const newPoints = Math.max(0, (user.total_points || 0) + pointsChange);
+      await base44.entities.User.update(userId, { total_points: newPoints });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['allUsers'] });
+      setSelectedUser(null);
+      setPointsToAdd(0);
+      setAdjustmentNote("");
+    },
+  });
+
+  const filteredUsers = users.filter(u => 
+    u.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    u.email?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  return (
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle>User Management</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="mb-4">
+            <div className="relative">
+ 
