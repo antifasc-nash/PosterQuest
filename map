@@ -1,0 +1,164 @@
+import React, { useState, useEffect } from "react";
+import { base44 } from "@/api/base44Client";
+import { useQuery } from "@tanstack/react-query";
+import MapView from "../components/map/MapView";
+import MeetupBanner from "../components/meetup/MeetupBanner";
+import LocationPopup from "../components/map/LocationPopup";
+import PosterLogModal from "../components/poster/PosterLogModal";
+import CelebrationModal from "../components/poster/CelebrationModal";
+import { Loader2, AlertCircle } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+
+export default function MapPage() {
+  const [selectedLocation, setSelectedLocation] = useState(null);
+  const [showLogModal, setShowLogModal] = useState(false);
+  const [showCelebration, setShowCelebration] = useState(false);
+  const [celebrationData, setCelebrationData] = useState(null);
+  const [currentUser, setCurrentUser] = useState(null);
+  const [userLoading, setUserLoading] = useState(true);
+
+  const { data: locations = [], isLoading: locationsLoading, error: locationsError, refetch: refetchLocations } = useQuery({
+    queryKey: ['locations'],
+    queryFn: async () => {
+      try {
+        return await base44.entities.Location.list();
+      } catch (error) {
+        console.error("Error fetching locations:", error);
+        return [];
+      }
+    },
+    initialData: [],
+    retry: 2,
+  });
+
+  const { data: meetups = [] } = useQuery({
+    queryKey: ['meetups'],
+    queryFn: async () => {
+      try {
+        return await base44.entities.Meetup.filter({ is_active: true }, '-created_date', 1);
+      } catch (error) {
+        console.error("Error fetching meetups:", error);
+        return [];
+      }
+    },
+    initialData: [],
+    retry: 2,
+  });
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const isAuth = await base44.auth.isAuthenticated();
+        if (isAuth) {
+          const user = await base44.auth.me();
+          setCurrentUser(user);
+        }
+      } catch (error) {
+        console.error("Error fetching user:", error);
+      } finally {
+        setUserLoading(false);
+      }
+    };
+    fetchUser();
+  }, []);
+
+  const handleLocationClick = (location) => {
+    setSelectedLocation(location);
+  };
+
+  const handleLogPoster = () => {
+    setShowLogModal(true);
+  };
+
+  const handleLogSuccess = async (data) => {
+    setShowLogModal(false);
+    setSelectedLocation(null);
+    setCelebrationData(data);
+    setShowCelebration(true);
+    
+    try {
+      const isAuth = await base44.auth.isAuthenticated();
+      if (isAuth) {
+        const user = await base44.auth.me();
+        setCurrentUser(user);
+      }
+    } catch (error) {
+      console.error("Error refreshing user:", error);
+    }
+    
+    refetchLocations();
+  };
+
+  if (locationsLoading || userLoading) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <div className="text-center">
+          <Loader2 className="w-12 h-12 animate-spin text-blue-600 mx-auto mb-4" />
+          <p className="text-gray-600">Loading map...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (locationsError) {
+    return (
+      <div className="p-4">
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            Unable to load locations. Please refresh the page.
+          </AlertDescription>
+        </Alert>
+      </div>
+    );
+  }
+
+  return (
+    <div className="h-full flex flex-col">
+      {meetups.length > 0 && <MeetupBanner meetup={meetups[0]} />}
+      
+      <div className="flex-1 relative min-h-0">
+        {locations.length === 0 ? (
+          <div className="flex items-center justify-center h-full">
+            <div className="text-center p-6">
+              <AlertCircle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+              <p className="text-gray-600 font-medium">No locations available yet</p>
+              <p className="text-sm text-gray-500 mt-2">Please contact an admin to add locations</p>
+            </div>
+          </div>
+        ) : (
+          <MapView 
+            locations={locations} 
+            onLocationClick={handleLocationClick}
+            userEmail={currentUser?.email}
+          />
+        )}
+      </div>
+
+      {selectedLocation && !showLogModal && (
+        <LocationPopup
+          location={selectedLocation}
+          onClose={() => setSelectedLocation(null)}
+          onLogPoster={handleLogPoster}
+          userEmail={currentUser?.email}
+        />
+      )}
+
+      {showLogModal && selectedLocation && (
+        <PosterLogModal
+          location={selectedLocation}
+          currentUser={currentUser}
+          onClose={() => setShowLogModal(false)}
+          onSuccess={handleLogSuccess}
+        />
+      )}
+
+      {showCelebration && celebrationData && (
+        <CelebrationModal
+          data={celebrationData}
+          onClose={() => setShowCelebration(false)}
+        />
+      )}
+    </div>
+  );
+}
