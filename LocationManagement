@@ -1,0 +1,56 @@
+import React, { useState } from "react";
+import { base44 } from "@/api/base44Client";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Plus, Trash2, Upload } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+
+export default function LocationManagement() {
+  const [showAddDialog, setShowAddDialog] = useState(false);
+  const [newLocation, setNewLocation] = useState({
+    address: "",
+    neighborhood: "",
+    lat: "",
+    lng: "",
+    location_type: "intersection",
+    priority: "standard",
+  });
+
+  const queryClient = useQueryClient();
+
+  const { data: locations = [] } = useQuery({
+    queryKey: ['locations'],
+    queryFn: () => base44.entities.Location.list(),
+    initialData: [],
+  });
+
+  const createLocationMutation = useMutation({
+    mutationFn: (locationData) => base44.entities.Location.create(locationData),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['locations'] });
+      setShowAddDialog(false);
+      setNewLocation({
+        address: "",
+        neighborhood: "",
+        lat: "",
+        lng: "",
+        location_type: "intersection",
+        priority: "standard",
+      });
+    },
+  });
+
+  const deleteLocationMutation = useMutation({
+    mutationFn: (locationId) => base44.entities.Location.delete(locationId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['locations'] });
+    },
+  });
+
+ 
