@@ -1,0 +1,49 @@
+{
+  "name": "PosterLog",
+  "type": "object",
+  "properties": {
+    "user_email": {
+      "type": "string",
+      "description": "Email of the user who placed the poster"
+    },
+    "user_name": {
+      "type": "string",
+      "description": "Name of the user who placed the poster"
+    },
+    "location_id": {
+      "type": "string",
+      "description": "ID of the location where poster was placed"
+    },
+    "location_address": {
+      "type": "string",
+      "description": "Address of the location"
+    },
+    "photo_url": {
+      "type": "string",
+      "description": "URL of the uploaded photo"
+    },
+    "points_earned": {
+      "type": "number",
+      "description": "Points earned for this poster placement"
+    },
+    "poster_number": {
+      "type": "number",
+      "description": "Which poster number this was for the user (1st, 2nd, etc.)"
+    },
+    "multiplier": {
+      "type": "number",
+      "description": "The multiplier applied (1x, 2x, 3x, 4x, or 5x)"
+    },
+    "flagged": {
+      "type": "boolean",
+      "default": false,
+      "description": "Admin flag for suspicious activity"
+    }
+  },
+  "required": [
+    "user_email",
+    "location_id",
+    "photo_url",
+    "points_earned"
+  ]
+}
