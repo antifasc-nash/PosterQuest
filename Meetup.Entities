@@ -1,0 +1,38 @@
+{
+  "name": "Meetup",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string",
+      "description": "Meetup title"
+    },
+    "date": {
+      "type": "string",
+      "format": "date",
+      "description": "Date of the meetup"
+    },
+    "time": {
+      "type": "string",
+      "description": "Time of the meetup"
+    },
+    "location": {
+      "type": "string",
+      "description": "Meetup location address"
+    },
+    "description": {
+      "type": "string",
+      "description": "Additional meetup details"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true,
+      "description": "Whether this is the current active meetup"
+    }
+  },
+  "required": [
+    "title",
+    "date",
+    "time",
+    "location"
+  ]
+}
