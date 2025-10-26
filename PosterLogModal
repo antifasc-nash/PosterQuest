@@ -1,0 +1,56 @@
+import React, { useState } from 'react';
+import { base44 } from "@/api/base44Client";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Camera, Upload, X, AlertCircle, Loader2 } from "lucide-react";
+
+export default function PosterLogModal({ location, currentUser, onClose, onSuccess }) {
+  const [photo, setPhoto] = useState(null);
+  const [photoPreview, setPhotoPreview] = useState(null);
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState(null);
+
+  const calculatePoints = (posterCount) => {
+    const basePoints = 4;
+    if (posterCount < 11) return { points: basePoints * 1, multiplier: 1 };
+    if (posterCount < 26) return { points: basePoints * 2, multiplier: 2 };
+    if (posterCount < 51) return { points: basePoints * 3, multiplier: 3 };
+    if (posterCount < 101) return { points: basePoints * 4, multiplier: 4 };
+    return { points: basePoints * 5, multiplier: 5 };
+  };
+
+  const handlePhotoCapture = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      if (file.size > 10 * 1024 * 1024) {
+        setError("Photo must be smaller than 10MB");
+        return;
+      }
+      setPhoto(file);
+      setPhotoPreview(URL.createObjectURL(file));
+      setError(null);
+    }
+  };
+
+  const handleSubmit = async () => {
+    if (!photo) {
+      setError("Please take a photo of the poster");
+      return;
+    }
+
+    setUploading(true);
+    setError(null);
+
+    try {
+      // Upload photo
+      const { file_url } = await base44.integrations.Core.UploadFile({ file: photo });
+
+      // Calculate points
+      const newPosterCount = (currentUser.poster_count || 0) + 1;
+      const { points, multiplier } = calculatePoints(newPosterCount);
+
+      // Create poster log
+      await base44.entities.PosterLog.create({
+        user_email: currentUser.email,
+ 
