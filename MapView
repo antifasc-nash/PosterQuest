@@ -1,0 +1,56 @@
+import React, { useEffect } from 'react';
+import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
+import { CheckCircle } from 'lucide-react';
+
+// Fix for default marker icons in react-leaflet
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
+  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+});
+
+// Custom marker icons
+const createCustomIcon = (color, isChecked = false) => {
+  const iconHtml = isChecked 
+    ? `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="${color}" stroke="white" stroke-width="2"><circle cx="12" cy="10" r="8"/><path d="M12 21s-8-4.5-8-11a8 8 0 1 1 16 0c0 6.5-8 11-8 11z"/><path d="m9 10 2 2 4-4" stroke="white" stroke-width="2" fill="none"/></svg>`
+    : `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="${color}" stroke="white" stroke-width="2"><circle cx="12" cy="10" r="3"/><path d="M12 21s-8-4.5-8-11a8 8 0 1 1 16 0c0 6.5-8 11-8 11z"/></svg>`;
+
+  return L.divIcon({
+    html: iconHtml,
+    className: 'custom-marker',
+    iconSize: [32, 32],
+    iconAnchor: [16, 32],
+    popupAnchor: [0, -32],
+  });
+};
+
+const unclaimedIcon = createCustomIcon('#3B82F6', false);
+const claimedIcon = createCustomIcon('#10B981', true);
+
+function MapController({ locations }) {
+  const map = useMap();
+
+  useEffect(() => {
+    if (locations && locations.length > 0) {
+      const bounds = L.latLngBounds(
+        locations.map(loc => [loc.lat, loc.lng])
+      );
+      map.fitBounds(bounds, { padding: [50, 50], maxZoom: 14 });
+    }
+  }, [locations, map]);
+
+  return null;
+}
+
+export default function MapView({ locations, onLocationClick, userEmail }) {
+  const defaultCenter = [36.1627, -86.7816]; // Nashville, TN
+  const defaultZoom = 13;
+
+  return (
+    <div style={{ width: '100%', height: '100%' }}>
+      <MapContainer
+        center={defaultCenter}
+ 
