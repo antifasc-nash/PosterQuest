@@ -1,0 +1,56 @@
+import React from 'react';
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Calendar, MapPin, Clock, Download } from "lucide-react";
+import { format } from "date-fns";
+
+export default function MeetupBanner({ meetup }) {
+  const generateGoogleCalendarUrl = () => {
+    const startDate = new Date(meetup.date + 'T' + meetup.time);
+    const endDate = new Date(startDate.getTime() + 2 * 60 * 60 * 1000); // 2 hours later
+    
+    const formatDate = (date) => {
+      return date.toISOString().replace(/-|:|\.\d\d\d/g, '');
+    };
+
+    return `https://www.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(meetup.title)}&dates=${formatDate(startDate)}/${formatDate(endDate)}&details=${encodeURIComponent(meetup.description || '')}&location=${encodeURIComponent(meetup.location)}`;
+  };
+
+  const generateICSFile = () => {
+    const startDate = new Date(meetup.date + 'T' + meetup.time);
+    const endDate = new Date(startDate.getTime() + 2 * 60 * 60 * 1000);
+    
+    const formatDate = (date) => {
+      return date.toISOString().replace(/-|:|\.\d\d\d/g, '');
+    };
+
+    const icsContent = `BEGIN:VCALENDAR
+VERSION:2.0
+BEGIN:VEVENT
+DTSTART:${formatDate(startDate)}
+DTEND:${formatDate(endDate)}
+SUMMARY:${meetup.title}
+DESCRIPTION:${meetup.description || ''}
+LOCATION:${meetup.location}
+END:VEVENT
+END:VCALENDAR`;
+
+    const blob = new Blob([icsContent], { type: 'text/calendar' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'meetup.ics';
+    link.click();
+  };
+
+  return (
+    <Card className="m-4 bg-gradient-to-r from-purple-600 to-blue-600 text-white border-none shadow-lg">
+      <CardContent className="p-4">
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex-1">
+            <div className="flex items-center gap-2 mb-2">
+              <Calendar className="w-5 h-5" />
+              <h3 className="font-bold text-lg">Next Meetup</h3>
+            </div>
+            <div className="space-y-1 text-sm">
+ 
