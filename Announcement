@@ -1,0 +1,28 @@
+{
+  "name": "Announcement",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string",
+      "description": "Announcement title"
+    },
+    "message": {
+      "type": "string",
+      "description": "Announcement message body"
+    },
+    "send_email": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether to send via email"
+    },
+    "sent": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether announcement has been sent"
+    }
+  },
+  "required": [
+    "title",
+    "message"
+  ]
+}
