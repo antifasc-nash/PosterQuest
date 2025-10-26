@@ -1,0 +1,206 @@
+
+import React, { useState } from "react";
+import { base44 } from "@/api/base44Client";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge"; // Added Badge import
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Plus, Edit, Trash2 } from "lucide-react";
+import { format } from "date-fns";
+
+export default function MeetupManagement() {
+  const [showDialog, setShowDialog] = useState(false);
+  const [editingMeetup, setEditingMeetup] = useState(null);
+  const [formData, setFormData] = useState({
+    title: "Biweekly Volunteer Meetup",
+    date: "",
+    time: "",
+    location: "",
+    description: "",
+    is_active: true,
+  });
+
+  const queryClient = useQueryClient();
+
+  const { data: meetups = [] } = useQuery({
+    queryKey: ['allMeetups'],
+    queryFn: () => base44.entities.Meetup.list('-created_date'),
+    initialData: [],
+  });
+
+  const createMeetupMutation = useMutation({
+    mutationFn: (meetupData) => base44.entities.Meetup.create(meetupData),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['allMeetups'] });
+      queryClient.invalidateQueries({ queryKey: ['meetups'] });
+      setShowDialog(false);
+      resetForm();
+    },
+  });
+
+  const updateMeetupMutation = useMutation({
+    mutationFn: ({ id, data }) => base44.entities.Meetup.update(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['allMeetups'] });
+      queryClient.invalidateQueries({ queryKey: ['meetups'] });
+      setShowDialog(false);
+      setEditingMeetup(null);
+      resetForm();
+    },
+  });
+
+  const deleteMeetupMutation = useMutation({
+    mutationFn: (meetupId) => base44.entities.Meetup.delete(meetupId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['allMeetups'] });
+      queryClient.invalidateQueries({ queryKey: ['meetups'] });
+    },
+  });
+
+  const resetForm = () => {
+    setFormData({
+      title: "Biweekly Volunteer Meetup",
+      date: "",
+      time: "",
+      location: "",
+      description: "",
+      is_active: true,
+    });
+  };
+
+  const handleEdit = (meetup) => {
+    setEditingMeetup(meetup);
+    setFormData({
+      title: meetup.title,
+      date: meetup.date,
+      time: meetup.time,
+      location: meetup.location,
+      description: meetup.description || "",
+      is_active: meetup.is_active,
+    });
+    setShowDialog(true);
+  };
+
+  const handleSubmit = () => {
+    if (editingMeetup) {
+      updateMeetupMutation.mutate({ id: editingMeetup.id, data: formData });
+    } else {
+      createMeetupMutation.mutate(formData);
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle>Meetup Management</CardTitle>
+          <Button onClick={() => setShowDialog(true)}>
+            <Plus className="w-4 h-4 mr-2" />
+            Create Meetup
+          </Button>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {meetups.map((meetup) => (
+              <Card key={meetup.id} className={meetup.is_active ? 'border-blue-500 border-2' : ''}>
+                <CardContent className="p-4">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <h3 className="font-semibold text-lg">{meetup.title}</h3>
+                      <div className="text-sm text-gray-600 mt-1">
+                        <div>{format(new Date(meetup.date), "MMMM d, yyyy")} at {meetup.time}</div>
+                        <div className="mt-1">{meetup.location}</div>
+                        {meetup.description && (
+                          <div className="mt-2 text-gray-500">{meetup.description}</div>
+                        )}
+                      </div>
+                      {meetup.is_active && (
+                        <Badge className="mt-2 bg-blue-100 text-blue-800">Active</Badge>
+                      )}
+                    </div>
+                    <div className="flex gap-2">
+                      <Button size="sm" variant="outline" onClick={() => handleEdit(meetup)}>
+                        <Edit className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => deleteMeetupMutation.mutate(meetup.id)}
+                      >
+                        <Trash2 className="w-4 h-4 text-red-600" />
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      <Dialog open={showDialog} onOpenChange={(open) => {
+        setShowDialog(open);
+        if (!open) {
+          setEditingMeetup(null);
+          resetForm();
+        }
+      }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{editingMeetup ? 'Edit Meetup' : 'Create New Meetup'}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Title</Label>
+              <Input
+                value={formData.title}
+                onChange={(e) => setFormData({...formData, title: e.target.value})}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Date</Label>
+                <Input
+                  type="date"
+                  value={formData.date}
+                  onChange={(e) => setFormData({...formData, date: e.target.value})}
+                />
+              </div>
+              <div>
+                <Label>Time</Label>
+                <Input
+                  type="time"
+                  value={formData.time}
+                  onChange={(e) => setFormData({...formData, time: e.target.value})}
+                />
+              </div>
+            </div>
+            <div>
+              <Label>Location</Label>
+              <Input
+                value={formData.location}
+                onChange={(e) => setFormData({...formData, location: e.target.value})}
+                placeholder="123 Main St, Nashville, TN"
+              />
+            </div>
+            <div>
+              <Label>Description (optional)</Label>
+              <Textarea
+                value={formData.description}
+                onChange={(e) => setFormData({...formData, description: e.target.value})}
+                placeholder="Additional details about the meetup..."
+              />
+            </div>
+            <Button onClick={handleSubmit} className="w-full" disabled={!formData.title || !formData.date || !formData.time || !formData.location}>
+              {editingMeetup ? 'Update Meetup' : 'Create Meetup'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
