@@ -1,0 +1,66 @@
+{
+  "name": "Location",
+  "type": "object",
+  "properties": {
+    "address": {
+      "type": "string",
+      "description": "Street address of the location"
+    },
+    "neighborhood": {
+      "type": "string",
+      "description": "Nashville neighborhood"
+    },
+    "lat": {
+      "type": "number",
+      "description": "Latitude coordinate"
+    },
+    "lng": {
+      "type": "number",
+      "description": "Longitude coordinate"
+    },
+    "location_type": {
+      "type": "string",
+      "enum": [
+        "intersection",
+        "coffee_shop",
+        "music_venue",
+        "bar",
+        "restaurant",
+        "park",
+        "transit",
+        "campus"
+      ],
+      "description": "Type of location"
+    },
+    "priority": {
+      "type": "string",
+      "enum": [
+        "high",
+        "medium",
+        "standard"
+      ],
+      "default": "standard",
+      "description": "Priority level for placement"
+    },
+    "claimed": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether a poster has been placed here"
+    },
+    "claimed_by": {
+      "type": "string",
+      "description": "Email of user who claimed this location"
+    },
+    "claimed_date": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the location was claimed"
+    }
+  },
+  "required": [
+    "address",
+    "lat",
+    "lng",
+    "location_type"
+  ]
+}
